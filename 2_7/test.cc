@@ -92,8 +92,72 @@ void test6()
     std::cout << redis.type("key4") << std::endl;
 }
 
+void test7()
+{
+    using namespace std::chrono_literals;
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.set("key1", "value1", 5s);
+    std::this_thread::sleep_for(6s);
+    auto ret = redis.get("key1");
+    if(ret) std::cout << ret.value() << std::endl;
+    redis.set("key2", "value2", 0s, sw::redis::UpdateType::EXIST);
+    ret = redis.get("key2");
+    if(ret) std::cout << ret.value() << std::endl;
+    redis.set("key3", "value3", 0s, sw::redis::UpdateType::NOT_EXIST);
+    ret = redis.get("key3");
+    if(ret) std::cout << ret.value() << std::endl;
+}
+
+void test8()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    // redis.mset({std::make_pair("key1", "value1"), std::make_pair("key2", "value2"), std::make_pair("key3", "value3")});
+    // redis.mset({std::pair<std::string, std::string>{"key1", "value1"}, 
+    //     {"key2", "value2"}, 
+    //     {"key3", "value3"}});
+    std::vector<std::pair<std::string, std::string>> arr{
+        {"key1", "value1"},
+        {"key2", "value2"},
+        {"key3", "value3"}
+    };
+    redis.mset(arr.begin(), arr.end());
+    std::vector<sw::redis::OptionalString> buffer;
+    auto it = std::back_inserter(buffer);
+    redis.mget({ "key1", "key2", "key3", "key4" }, it);
+    for(auto& e : buffer)
+        if(e) std::cout << e.value() << std::endl;
+        else std::cout << "not exists." << std::endl;
+}
+
+void test9()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.set("key1", "abcdefghij");
+    auto ret1 = redis.getrange("key1", 1, 3);
+    std::cout << ret1 << std::endl;
+    redis.setrange("key1", 3, "aaaaaaaaaaaaaaaaa");
+    auto ret2 = redis.get("key1");
+    if(ret2) std::cout << ret2.value() << std::endl;
+}
+
+void test10()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.set("key1", "1");
+    redis.incr("key1");
+    auto ret1 = redis.get("key1");
+    if(ret1) std::cout << ret1.value() << std::endl;
+    redis.decr("key1");
+    auto ret2 = redis.get("key1");
+    if(ret2) std::cout << ret2.value() << std::endl;
+}
+
 int main()
 {
-    test6();
+    test10();
     return 0;
 }
