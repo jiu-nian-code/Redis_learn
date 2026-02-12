@@ -5,6 +5,7 @@
 #include<sw/redis++/redis++.h>
 #include<thread>
 #include<chrono>
+#include<set>
 
 void test1()
 {
@@ -156,8 +157,212 @@ void test10()
     if(ret2) std::cout << ret2.value() << std::endl;
 }
 
+void test11()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.lpush("mylist1", "hello");
+    redis.lpush("mylist1", { "world", "nihao", "redis"});
+    std::vector<std::string> arr{"111", "222", "333"};
+    redis.lpush("mylist1", arr.begin(), arr.end());
+    std::vector<std::string> back;
+    auto it = std::back_inserter(back);
+    redis.lrange("mylist1", 0, -1, it);
+    for(auto& e : back)
+        std::cout << e << std::endl;
+}
+
+void test12()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.rpush("mylist1", "hello");
+    redis.rpush("mylist1", { "world", "nihao", "redis"});
+    std::vector<std::string> arr{"111", "222", "333"};
+    redis.rpush("mylist1", arr.begin(), arr.end());
+    std::vector<std::string> back;
+    auto it = std::back_inserter(back);
+    redis.lrange("mylist1", 0, -1, it);
+    for(auto& e : back)
+        std::cout << e << std::endl;
+}
+
+void test13()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.lpush("mylist1", { "1", "2", "3", "4"});
+    sw::redis::OptionalString ret1 = redis.lpop("mylist1");
+    if(ret1) std::cout << ret1.value() << std::endl;
+    sw::redis::OptionalString ret2 = redis.rpop("mylist1");
+    if(ret2) std::cout << ret2.value() << std::endl;
+}
+
+void test14()
+{
+    using namespace std::chrono_literals;
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    auto ret = redis.brpop({ "key1", "key2", "key3" }, 0s);
+    if(ret)
+    {
+        std::cout << "key: " << ret.value().first << std::endl;
+        std::cout << "elem: " << ret.value().second << std::endl;
+    }
+    else
+    {
+        std::cout << "result error" << std::endl;
+    }
+}
+
+void test15()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.lpush("key1", {"1", "2", "3"});
+    auto ret = redis.llen("key1");
+    std::cout << ret << std::endl;
+}
+
+void test16()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.sadd("myset1", "1");
+    redis.sadd("myset1", {"2", "3", "4"});
+    std::vector<std::string> arr{"5", "6", "7"};
+    redis.sadd("myset1", arr.begin(), arr.end());
+
+    // std::vector<std::string> ret;
+    // auto it = std::back_inserter(ret);
+    std::set<std::string> ret;
+    auto it = std::inserter(ret, ret.end());
+    redis.smembers("myset1", it);
+    for(auto& e : ret)
+        std::cout << e << std::endl;
+}
+
+void test17()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.sadd("myset1", {"1", "2", "3"});
+    std::cout << redis.sismember("myset1", "2") << std::endl;
+    std::cout << redis.sismember("myset1", "4") << std::endl;
+    std::cout << redis.scard("myset1") << std::endl;
+    auto ret = redis.spop("myset1");
+    if(ret) std::cout << ret.value() << std::endl;
+}
+
+void test18()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.sadd("myset1", {"1", "2", "3"});
+    redis.sadd("myset2", {"2", "3", "4"});
+    std::set<std::string> ret1;
+    auto it = std::inserter(ret1, ret1.end());
+    redis.sinter({"myset1", "myset2"}, it);
+    for(auto& e : ret1)
+        std::cout << e << std::endl;
+    std::cout << std::endl;
+    std::cout << redis.sinterstore("myset3", {"myset1", "myset2"}) << std::endl << std::endl;
+    std::set<std::string> ret2;
+    it = std::inserter(ret2, ret2.end());
+    redis.smembers("myset3", it);
+    for(auto& e : ret2)
+        std::cout << e << std::endl;
+}
+
+void test19()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.hset("myhash1", "f1", "1");
+    redis.hset("myhash1", std::make_pair("f2", "2"));
+    redis.hset("myhash1", {std::make_pair("f3", "3"), std::make_pair("f4", "4")});
+    std::vector<std::pair<std::string, std::string>> arr{std::make_pair("f5", "5"), std::make_pair("f6", "6")};
+    redis.hset("myset1", arr.begin(), arr.end());
+    auto ret = redis.hget("myhash1", "f1");
+    if(ret) std::cout << ret.value() << std::endl;
+}
+
+void test20()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.hset("myhash1", {std::make_pair("f1", "1"), std::make_pair("f2", "2"), std::make_pair("f3", "3")});
+    std::cout << redis.hexists("myhash1", "f1") << std::endl;
+    std::cout << redis.hdel("myhash1", "f1") << std::endl;
+    std::cout << redis.hlen("myhash1") << std::endl;
+}
+
+void test21()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.hset("myhash1", {std::make_pair("f1", "1"), std::make_pair("f2", "2"), std::make_pair("f3", "3")});
+    std::vector<std::string> ret1;
+    auto it = std::back_inserter(ret1);
+    redis.hkeys("myhash1", it);
+    redis.hvals("myhash1", it);
+    for(auto& e : ret1)
+        std::cout << e << std::endl;
+    std::cout << std::endl;
+    std::vector<std::string> ret2;
+    it = std::back_inserter(ret2);
+    redis.hmget("myhash1", {"f1", "f2"}, it);
+    for(auto& e : ret2)
+        std::cout << e << std::endl;
+}
+
+void test22()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.zadd("myzset1", "a", 1);
+    redis.zadd("myzset1", {
+        std::make_pair("b", 2),
+        std::make_pair("c", 3)
+    });
+    std::vector<std::pair<std::string, double>> arr{
+        std::make_pair("d", 4),
+        std::make_pair("e", 5)
+    };
+    redis.zadd("myzset1", arr.begin(), arr.end());
+    std::vector<std::string> ret1;
+    auto it1 = std::back_inserter(ret1);
+    redis.zrange("myzset1", 0, -1, it1);
+    for(auto& e : ret1)
+        std::cout << e << std::endl;
+    std::cout << std::endl;
+
+    std::vector<std::pair<std::string, double>> ret2;
+    auto it2 = std::back_inserter(ret2);
+    redis.zrange("myzset1", 0, -1, it2);
+    for(auto& e : ret2)
+        std::cout << e.first << " " << e.second << std::endl;
+}
+
+void test23()
+{
+    sw::redis::Redis redis("tcp://127.0.0.1:6379");
+    redis.flushall();
+    redis.zadd("myzset1", {
+        std::make_pair("a", 1),
+        std::make_pair("b", 2),
+        std::make_pair("c", 3)
+    });
+    redis.zrem("myzset1", "a");
+    std::cout << redis.zcard("myzset1") << std::endl;
+    auto score = redis.zscore("myzset1", "b");
+    if(score) std::cout << score.value() << std::endl;
+    auto rank = redis.zrank("myzset1", "b");
+    if(rank) std::cout << rank.value() << std::endl;
+}
+
 int main()
 {
-    test10();
+    test23();
     return 0;
 }
